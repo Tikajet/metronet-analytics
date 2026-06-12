@@ -4,17 +4,24 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados (Usa SQLite local se não achar o banco do Render)
+# Configura uma chave secreta padrão para a aplicação (necessário em produção)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'metronet_secreto_123')
+
+# Configuração do Banco de Dados
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///metronet.db')
+
+# Correção para o padrão do SQLAlchemy no Render/PostgreSQL
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+# Inicialização correta do banco de dados para Flask-SQLAlchemy 3.x
+db = SQLAlchemy()
+db.init_app(app)
 
-# --- MODELOS DO BANCO DE DADOS (ESTRUTURA INICIAL) ---
+# --- MODELOS DO BANCO DE DADOS ---
 
 class Setor(db.Model):
     __tablename__ = 'setores'
@@ -28,7 +35,7 @@ class Usuario(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
     senha_hash = db.Column(db.String(255), nullable=False)
-    perfil_acesso = db.Column(db.String(20), default='funcionario') # admin, gestor, funcionario
+    perfil_acesso = db.Column(db.String(20), default='funcionario')
     setor_id = db.Column(db.Integer, db.ForeignKey('setores.id'), nullable=False)
 
 # --- ROTAS DE TESTE ---
@@ -41,7 +48,7 @@ def index():
         "desenvolvedor": "Thiago"
     })
 
-# Cria o arquivo de banco local se ele não existir
+# Cria as tabelas se não existirem
 with app.app_context():
     db.create_all()
 
